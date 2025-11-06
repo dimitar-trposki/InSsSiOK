@@ -37,7 +37,7 @@ if (isset($_GET['id'])) {
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 20px;
+            margin: 20px;
         }
 
         form {

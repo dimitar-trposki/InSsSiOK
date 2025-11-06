@@ -4,8 +4,40 @@ include 'db_connection.php';
 
 $db = connectDatabase();
 
-$query = "SELECT * FROM movies";
-$result = $db->query($query);
+//$query = "SELECT * FROM movies";
+//
+//$result = $db->query($query);
+//
+
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$genreFilter = isset($_GET['genre']) ? trim($_GET['genre']) : '';
+
+if ($search !== '' && $genreFilter !== '' && $genreFilter !== 'all') {
+    $query = "SELECT * FROM movies WHERE title LIKE :search AND genre = :genre";
+} elseif ($search !== '') {
+    $query = "SELECT * FROM movies WHERE title LIKE :search";
+} elseif ($genreFilter !== '' && $genreFilter !== 'all') {
+    $query = "SELECT * FROM movies WHERE genre LIKE :genre";
+} else {
+    $query = "SELECT * FROM movies";
+}
+
+$stmt = $db->prepare($query);
+if ($search !== '') {
+    $stmt->bindValue(':search', '%' . $search . '%', SQLITE3_TEXT);
+}
+if ($genreFilter !== '') {
+    $stmt->bindValue(':genre', $genreFilter, SQLITE3_TEXT);
+}
+
+$result = $stmt->execute();
+
+$genreResult = $db->query('SELECT DISTINCT genre FROM movies');
+$genres = [];
+
+while ($row = $genreResult->fetchArray(SQLITE3_TEXT)) {
+    $genres[] = $row['genre'];
+}
 
 if (!$result) {
     die("Error fetching movies: " . $db->lastErrorMsg());
@@ -101,6 +133,16 @@ if (!$result) {
         div[style*="justify-content: space-between"] {
             margin-bottom: 15px;
         }
+
+        input, select {
+            padding: 10px;
+            margin-bottom: 18px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -110,6 +152,20 @@ if (!$result) {
         Add New Movie
     </a>
 </div>
+
+<form method="get">
+    <input type="text" name="search" placeholder="Search by title..." value="<?php echo htmlspecialchars($search); ?>">
+    <select name="genre">
+        <option value="all">All Genres</option>
+        <?php foreach ($genres as $g): ?>
+            <option value="<?php echo htmlspecialchars($g); ?>" <?php if ($g === $genreFilter) echo 'selected'; ?>>
+                <?php echo htmlspecialchars($g); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <button type="submit">Filter</button>
+</form>
+
 <table>
     <thead>
     <tr>
